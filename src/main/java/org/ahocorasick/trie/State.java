@@ -40,7 +40,7 @@ public abstract class State
     /**
      * 只要这个状态可达，则记录模式串
      */
-    private Set<String> emits = null;
+    private Set<Keyword> emits = null;
 
     /**
      * 构造深度为0的节点
@@ -73,11 +73,11 @@ public abstract class State
      * 添加一个匹配到的模式串（这个状态对应着这个模式串)
      * @param keyword
      */
-    public void addEmit(String keyword)
+    public void addEmit(Keyword keyword)
     {
         if (this.emits == null)
         {
-            this.emits = new TreeSet<String>();
+            this.emits = new TreeSet<Keyword>();
         }
         this.emits.add(keyword);
     }
@@ -86,9 +86,9 @@ public abstract class State
      * 添加一些匹配到的模式串
      * @param emits
      */
-    public void addEmit(Collection<String> emits)
+    public void addEmit(Collection<Keyword> emits)
     {
-        for (String emit : emits)
+        for (Keyword emit : emits)
         {
             addEmit(emit);
         }
@@ -98,9 +98,9 @@ public abstract class State
      * 获取这个节点代表的模式串（们）
      * @return
      */
-    public Collection<String> emit()
+    public Collection<Keyword> emit()
     {
-        return this.emits == null ? Collections.<String>emptyList() : this.emits;
+        return this.emits == null ? Collections.<Keyword>emptyList() : this.emits;
     }
 
     /**

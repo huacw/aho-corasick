@@ -14,8 +14,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  *
  * @author Robert Bor
  */
-public class Trie
-{
+public class Trie {
 
     private TrieConfig trieConfig;
 
@@ -28,22 +27,18 @@ public class Trie
 
     /**
      * 构造一棵trie树
+     *
      * @param trieConfig
      */
-    public Trie(TrieConfig trieConfig)
-    {
+    public Trie(TrieConfig trieConfig) {
         this(trieConfig, true);
     }
 
-    public Trie(TrieConfig trieConfig, boolean ascii)
-    {
+    public Trie(TrieConfig trieConfig, boolean ascii) {
         this.trieConfig = trieConfig;
-        if (ascii)
-        {
+        if (ascii) {
             this.rootState = new AsciiState();
-        }
-        else
-        {
+        } else {
             this.rootState = new UnicodeState();
         }
     }
@@ -51,59 +46,59 @@ public class Trie
     /**
      * 以默认配置构造一棵trie树
      */
-    public Trie()
-    {
+    public Trie() {
         this(new TrieConfig());
     }
 
     /**
      * 构造一棵trie树
+     *
      * @param ascii 是否是Ascii树（如果设为true，则会针对ascii加速，否则会支持Unicode）
      */
-    public Trie(boolean ascii)
-    {
+    public Trie(boolean ascii) {
         this(new TrieConfig(), ascii);
     }
 
     /**
      * 大小写敏感
+     *
      * @return
      */
-    public Trie caseInsensitive()
-    {
+    public Trie caseInsensitive() {
         this.trieConfig.setCaseInsensitive(true);
         return this;
     }
 
     /**
      * 不允许模式串在位置上前后重叠
+     *
      * @return
      */
-    public Trie removeOverlaps()
-    {
+    public Trie removeOverlaps() {
         this.trieConfig.setAllowOverlaps(false);
         return this;
     }
 
-    public Trie onlyWholeWords()
-    {
+    public Trie onlyWholeWords() {
         this.trieConfig.setOnlyWholeWords(true);
         return this;
     }
 
     /**
      * 添加一个模式串
+     *
      * @param keyword
      */
-    public void addKeyword(String keyword)
-    {
-        if (keyword == null || keyword.length() == 0)
-        {
+    public void addKeyword(Keyword keyword) {
+        if (keyword == null) {
+            return;
+        }
+        String word = keyword.getKeyword();
+        if (word == null || word.length() == 0) {
             return;
         }
         State currentState = this.rootState;
-        for (Character character : keyword.toCharArray())
-        {
+        for (Character character : word.toCharArray()) {
             currentState = currentState.addState(character);
         }
         currentState.addEmit(keyword);
@@ -111,60 +106,53 @@ public class Trie
 
     /**
      * 一个分词器
+     *
      * @param text 待分词文本
      * @return
      */
-    public Collection<Token> tokenize(String text)
-    {
+    public Collection<Token> tokenize(String text) {
 
         Collection<Token> tokens = new ArrayList<Token>();
 
         Collection<Emit> collectedEmits = parseText(text);
         int lastCollectedPosition = -1;
-        for (Emit emit : collectedEmits)
-        {
-            if (emit.getStart() - lastCollectedPosition > 1)
-            {
+        for (Emit emit : collectedEmits) {
+            if (emit.getStart() - lastCollectedPosition > 1) {
                 tokens.add(createFragment(emit, text, lastCollectedPosition));
             }
             tokens.add(createMatch(emit, text));
             lastCollectedPosition = emit.getEnd();
         }
-        if (text.length() - lastCollectedPosition > 1)
-        {
+        if (text.length() - lastCollectedPosition > 1) {
             tokens.add(createFragment(null, text, lastCollectedPosition));
         }
 
         return tokens;
     }
 
-    private Token createFragment(Emit emit, String text, int lastCollectedPosition)
-    {
+    private Token createFragment(Emit emit, String text, int lastCollectedPosition) {
         return new FragmentToken(text.substring(lastCollectedPosition + 1, emit == null ? text.length() : emit.getStart()));
     }
 
-    private Token createMatch(Emit emit, String text)
-    {
+    private Token createMatch(Emit emit, String text) {
         return new MatchToken(text.substring(emit.getStart(), emit.getEnd() + 1), emit);
     }
 
     /**
      * 模式匹配
+     *
      * @param text 待匹配的文本
      * @return 匹配到的模式串
      */
     @SuppressWarnings("unchecked")
-    public Collection<Emit> parseText(String text)
-    {
+    public Collection<Emit> parseText(String text) {
         checkForConstructedFailureStates();
 
         int position = 0;
         State currentState = this.rootState;
         List<Emit> collectedEmits = new ArrayList<Emit>();
-        for (Character character : text.toCharArray())
-        {
-            if (trieConfig.isCaseInsensitive())
-            {
+        for (Character character : text.toCharArray()) {
+            if (trieConfig.isCaseInsensitive()) {
                 character = Character.toLowerCase(character);
             }
             currentState = getState(currentState, character);
@@ -172,13 +160,11 @@ public class Trie
             ++position;
         }
 
-        if (trieConfig.isOnlyWholeWords())
-        {
+        if (trieConfig.isOnlyWholeWords()) {
             removePartialMatches(text, collectedEmits);
         }
 
-        if (!trieConfig.isAllowOverlaps())
-        {
+        if (!trieConfig.isAllowOverlaps()) {
             IntervalTree intervalTree = new IntervalTree((List<Intervalable>) (List<?>) collectedEmits);
             intervalTree.removeOverlaps((List<Intervalable>) (List<?>) collectedEmits);
         }
@@ -188,39 +174,36 @@ public class Trie
 
     /**
      * 移除半截单词
+     *
      * @param searchText
      * @param collectedEmits
      */
-    private void removePartialMatches(String searchText, List<Emit> collectedEmits)
-    {
+    private void removePartialMatches(String searchText, List<Emit> collectedEmits) {
         long size = searchText.length();
         List<Emit> removeEmits = new ArrayList<Emit>();
-        for (Emit emit : collectedEmits)
-        {
+        for (Emit emit : collectedEmits) {
             if ((emit.getStart() == 0 ||
                     !Character.isAlphabetic(searchText.charAt(emit.getStart() - 1))) &&
                     (emit.getEnd() + 1 == size ||
-                            !Character.isAlphabetic(searchText.charAt(emit.getEnd() + 1))))
-            {
+                            !Character.isAlphabetic(searchText.charAt(emit.getEnd() + 1)))) {
                 continue;
             }
             removeEmits.add(emit);
         }
 
-        for (Emit removeEmit : removeEmits)
-        {
+        for (Emit removeEmit : removeEmits) {
             collectedEmits.remove(removeEmit);
         }
     }
 
     /**
      * 跳转到下一个状态
+     *
      * @param currentState 当前状态
-     * @param character 接受字符
+     * @param character    接受字符
      * @return 跳转结果
      */
-    private static State getState(State currentState, Character character)
-    {
+    private static State getState(State currentState, Character character) {
         State newCurrentState = currentState.nextState(character);  // 先按success跳转
         while (newCurrentState == null) // 跳转失败的话，按failure跳转
         {
@@ -233,10 +216,8 @@ public class Trie
     /**
      * 检查是否建立了failure表
      */
-    private void checkForConstructedFailureStates()
-    {
-        if (!this.failureStatesConstructed)
-        {
+    private void checkForConstructedFailureStates() {
+        if (!this.failureStatesConstructed) {
             constructFailureStates();
         }
     }
@@ -244,31 +225,26 @@ public class Trie
     /**
      * 建立failure表
      */
-    private void constructFailureStates()
-    {
+    private void constructFailureStates() {
         Queue<State> queue = new LinkedBlockingDeque<State>();
 
         // 第一步，将深度为1的节点的failure设为根节点
-        for (State depthOneState : this.rootState.getStates())
-        {
+        for (State depthOneState : this.rootState.getStates()) {
             depthOneState.setFailure(this.rootState);
             queue.add(depthOneState);
         }
         this.failureStatesConstructed = true;
 
         // 第二步，为深度 > 1 的节点建立failure表，这是一个bfs
-        while (!queue.isEmpty())
-        {
+        while (!queue.isEmpty()) {
             State currentState = queue.remove();
 
-            for (Character transition : currentState.getTransitions())
-            {
+            for (Character transition : currentState.getTransitions()) {
                 State targetState = currentState.nextState(transition);
                 queue.add(targetState);
 
                 State traceFailureState = currentState.failure();
-                while (traceFailureState.nextState(transition) == null)
-                {
+                while (traceFailureState.nextState(transition) == null) {
                     traceFailureState = traceFailureState.failure();
                 }
                 State newFailureState = traceFailureState.nextState(transition);
@@ -280,18 +256,16 @@ public class Trie
 
     /**
      * 保存匹配结果
-     * @param position 当前位置，也就是匹配到的模式串的结束位置+1
-     * @param currentState 当前状态
+     *
+     * @param position       当前位置，也就是匹配到的模式串的结束位置+1
+     * @param currentState   当前状态
      * @param collectedEmits 保存位置
      */
-    private static void storeEmits(int position, State currentState, List<Emit> collectedEmits)
-    {
-        Collection<String> emits = currentState.emit();
-        if (emits != null && !emits.isEmpty())
-        {
-            for (String emit : emits)
-            {
-                collectedEmits.add(new Emit(position - emit.length() + 1, position, emit));
+    private static void storeEmits(int position, State currentState, List<Emit> collectedEmits) {
+        Collection<Keyword> emits = currentState.emit();
+        if (emits != null && !emits.isEmpty()) {
+            for (Keyword emit : emits) {
+                collectedEmits.add(new Emit(position - emit.getKeyword().length() + 1, position, emit));
             }
         }
     }
